@@ -3,13 +3,17 @@ package com.danran.miaosha.controller;
 
 import com.danran.miaosha.Mapper.OrderMapper;
 import com.danran.miaosha.pojo.Order;
+import com.danran.miaosha.pojo.User;
 import com.danran.miaosha.response.CommonReturnType;
 import com.danran.miaosha.service.BookService;
 import com.danran.miaosha.service.OrderService;
 import com.danran.miaosha.service.UserService;
+import com.danran.miaosha.utils.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.thymeleaf.expression.Bools;
+
+import javax.annotation.Resource;
 
 /**
  * @Classname UserController
@@ -31,6 +35,9 @@ public class UserController {
     @Autowired
     private OrderService orderService;
 
+    @Resource
+    private RedisUtil redisUtil;
+
     @RequestMapping(value = "/getBook", method = {RequestMethod.POST})
     @ResponseBody
     public CommonReturnType getBook(@RequestParam("user_id") int userId,
@@ -48,7 +55,13 @@ public class UserController {
 
         return CommonReturnType.create(order);
 
+    }
 
+    @RequestMapping(value = "/serialize", method = {RequestMethod.POST})
+    @ResponseBody
+    public CommonReturnType serializeUser(@RequestParam("user_id") int userId) {
+        User user = userService.getUserById(userId);
+        return CommonReturnType.create(redisUtil.set(user.getName(), user, 360));
     }
 
 }
