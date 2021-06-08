@@ -1,0 +1,31 @@
+docker run -e "JAVA_OPTS=-Drocketmq.namesrv.addr=127.0.0.1:9876 -Dcom.rocketmq.sendMessageWithVIPChannel=false" -p 8080:8080 -t styletang/rocketmq-console-ng
+
+docker run -d -p 10911:10911 -p 10909:10909 -v `pwd`/data/broker/logs:/root/logs -v `pwd`/data/broker/store:/root/store --name rmqbroker --link rmqnamesrv:namesrv -e "NAMESRV_ADDR=namesrv:9876" -e "MAX_POSSIBLE_HEAP=200000000" rocketmqinc/rocketmq:4.4.0 sh mqbroker
+
+docker run -d -p 9876:9876 -v `pwd`/data/namesrv/logs:/root/logs -v `pwd`/data/namesrv/store:/root/store --name rmqnamesrv -e "MAX_POSSIBLE_HEAP=100000000" rocketmqinc/rocketmq:4.4.0 sh mqnamesrv
+
+docker run --name redis -p 6379:6379 -d --restart=always redis redis-server --appendonly yes --requirepass "123456789"
+
+https://www.cnblogs.com/coding-one/p/11971149.html
+wget https://archive.apache.org/dist/rocketmq/4.4.0/rocketmq-all-4.4.0-bin-release.zip
+
+nohup ./bin/mqnamesrv -n 你的公网IP:9876 &
+
+nohup sh ./bin/mqbroker -n 121.37.174.92:9876 -c ./conf/broker.conf autoCreateTopicEnable=true >> broker.log
+
+启动内存配置
+
+由于name server和broker默认配置为4g到8g的内存，如果服务器内存不足需要修改默认内存；
+
+解决办法，找到runserver.sh和runbroker.sh，编辑 JAVA_OPT=”${JAVA_OPT} -server -Xms256m -Xmx256m -Xmn125m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=320m”
+
+
+
+
+
+
+
+
+
+
+
