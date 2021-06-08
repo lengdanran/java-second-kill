@@ -7,7 +7,7 @@
     <result column="stock" jdbcType="INTEGER" property="stock" />
   </resultMap>
   <sql id="Base_Column_List">
-    id, book_name, stock
+    id, book_name, stock, version
   </sql>
   <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
     select 
