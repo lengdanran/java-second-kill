@@ -15,5 +15,7 @@ public class Book implements Serializable {
 
     private Integer stock;
 
+    private Integer version;
+
     private static final long serialVersionUID = 1L;
 }
