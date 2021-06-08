@@ -61,6 +61,6 @@
     where id = #{id,jdbcType=INTEGER}
   </update>
   <update id="reduceBook" parameterType="java.lang.Integer">
-    update book set stock = stock - 1 where id = #{id,jdbcType=INTEGER}
+    update book set stock = stock - 1, version = version + 1 where id = #{id,jdbcType=INTEGER}
   </update>
 </mapper>
