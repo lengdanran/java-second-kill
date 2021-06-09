@@ -1,6 +1,8 @@
 package com.danran.miaosha.MQ;
 
 import com.alibaba.fastjson.JSON;
+import com.danran.miaosha.pojo.Order;
+import com.danran.miaosha.pojo.OrderMessage;
 import com.danran.miaosha.service.BookService;
 import com.danran.miaosha.service.OrderService;
 import com.danran.miaosha.utils.RedisUtil;
@@ -75,16 +77,20 @@ public class MQConsumer {
 
 
                 System.out.println("<<<<======扣减库存=========>>>>>");
-                boolean flag = bookService.reduceBook(book_id, version);
-                if (flag) {
-                    System.out.println("<<<<======创建订单=========>>>>>");
-                    orderService.addOrder(order_id, user_id, book_id, amount);
-                    System.out.println("<<<<======扣减库存后，刷新Redis缓存=========>>>>>");
-                    redisUtil.set(book_id, bookService.getBookById(book_id), 2);
-                } else {
-                    System.out.println("<<<<======扣减库存失败，回滚=========>>>>>");
+                synchronized (this) {
+                    boolean flag = bookService.reduceBook(book_id, version);
+                    if (flag) {
+                        System.out.println("<<<<======创建订单=========>>>>>");
+                        Order order = orderService.addOrder(order_id, user_id, book_id, amount);
+                        System.out.println("<<<<======扣减库存后，刷新Redis缓存=========>>>>>");
+                        redisUtil.set(book_id, bookService.getBookById(book_id), 2);
+                        System.out.println("<<<<<<===回填订单信息["+order+"]=====>>>>>>");
+                        OrderMessage.addMessage(order_id, order);
+                    } else {
+                        System.out.println("<<<<======扣减库存失败，回滚=========>>>>>");
 //                    orderService.rollbackOrder(order_id);
 
+                    }
                 }
 
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
