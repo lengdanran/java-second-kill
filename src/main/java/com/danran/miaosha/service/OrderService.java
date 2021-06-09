@@ -17,18 +17,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OrderService {
 
+    private final static int DEAL = 1;
+    private final static int ROLL_BACK = 0;
+
     @Autowired
     private OrderMapper orderMapper;
 
 
     @Transactional
-    public Order addOrder(String orderID, int userId, int bookId, int amount) {
-        Order order = new Order(orderID, userId, bookId, amount);
+    public Order addOrder(String orderID, int userId, String bookId, int amount) {
+        Order order = new Order(orderID, userId, bookId, amount, DEAL);
+        System.out.println("<<<<<<<<<=================添加order=================>>>>>>>>>>");
         orderMapper.insert(order);
         return order;
     }
 
     @Transactional
+    public Order rollbackOrder(String orderID) {
+        Order order = orderMapper.selectByPrimaryKey(orderID);
+        order.setStatus(ROLL_BACK);
+        System.out.println("<<<<<<<<<=================order回滚=================>>>>>>>>>>");
+        orderMapper.insertSelective(order);
+        return order;
+    }
+
+//    @Transactional
     public Order getOrderById(String id) {
         return orderMapper.selectByPrimaryKey(id);
     }

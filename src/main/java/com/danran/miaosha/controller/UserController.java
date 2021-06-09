@@ -2,6 +2,7 @@ package com.danran.miaosha.controller;
 
 
 import com.danran.miaosha.MQ.MQProducer;
+import com.danran.miaosha.pojo.Book;
 import com.danran.miaosha.pojo.Order;
 import com.danran.miaosha.pojo.User;
 import com.danran.miaosha.response.CommonReturnType;
@@ -27,6 +28,10 @@ import java.util.concurrent.*;
 @RequestMapping("/user")
 @CrossOrigin
 public class UserController {
+
+    private final static int EX_TIME = 2;
+    private final static int DEAL = 1;
+    private final static int ROLL_BACK = 0;
 
     @Autowired
     private UserService userService;
@@ -58,7 +63,7 @@ public class UserController {
     @RequestMapping(value = "/getBook", method = {RequestMethod.POST})
     @ResponseBody
     public CommonReturnType getBook(@RequestParam("user_id") int userId,
-                                    @RequestParam("book_id") int bookId) {
+                                    @RequestParam("book_id") String bookId) {
         // 检查用户和书籍的存在信息
         boolean userExists = userService.isExists(userId);
         boolean bookExists = bookService.isExists(bookId);
@@ -67,7 +72,7 @@ public class UserController {
         }
         // 生成订单信息(Order)
         // Order order = orderService.addOrder(userId, bookId,1);
-        Order order = new Order(orderIDUtil.getOrderID(), userId, bookId, 1);
+        Order order = new Order(orderIDUtil.getOrderID(), userId, bookId, 1, DEAL);
 
         // 同步调用线程池的submit方法
         // 拥塞窗口为20的等待队列，用来队列化泄洪
@@ -75,9 +80,16 @@ public class UserController {
 
             @Override
             public Object call() throws Exception {
-
+                Book book;
+                if ((book = (Book) redisUtil.get(bookId)) == null) {
+                    // redis 缓存中没有该书籍的信息，从数据中拉取，并更新缓存,设置失效时间为20s
+                    System.out.println("redis 缓存中没有该书籍的信息，从数据中拉取，并更新缓存,设置失效时间");
+                    book = bookService.getBookById(bookId);
+                    if (book == null) throw new RuntimeException("该书籍不存在");
+                    redisUtil.set(bookId, book, EX_TIME);
+                }
                 // 完成对应的下单事务型消息机制
-                if (!mqProducer.transactionAsyncReduceStock(order.getId(), userId, bookId)) {
+                if (!mqProducer.transactionAsyncReduceStock(order.getId(), userId, bookId, book.getVersion())) {
                     throw new Exception("下单失败");
                 }
                 return "<<<<===下单成功===>>>>";
@@ -85,7 +97,7 @@ public class UserController {
         });
 
         try {
-            future.get();
+            Object o = future.get();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
             return CommonReturnType.failed("失败：future.get()方法出错");

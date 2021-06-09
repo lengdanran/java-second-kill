@@ -144,6 +144,9 @@ rocket除了9876其实还有两个端口
 
 所以应当放开 9876,10911， 10909这三个端口
 
+docker run -e "JAVA_OPTS=-Drocketmq.namesrv.addr=47.98.166.246:9876 -Dcom.rocketmq.sendMessageWithVIPChannel=false" -p 8080:8080 -t styletang/rocketmq-console-ng
+
+
 
 
 -----------

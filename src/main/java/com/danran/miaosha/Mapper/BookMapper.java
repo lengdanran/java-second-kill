@@ -7,17 +7,17 @@ import org.springframework.stereotype.Repository;
 @Mapper
 @Repository
 public interface BookMapper {
-    int deleteByPrimaryKey(Integer id);
+    int deleteByPrimaryKey(String id);
 
     int insert(Book record);
 
     int insertSelective(Book record);
 
-    Book selectByPrimaryKey(Integer id);
+    Book selectByPrimaryKey(String id);
 
     int updateByPrimaryKeySelective(Book record);
 
     int updateByPrimaryKey(Book record);
 
-    int reduceBook(Integer id);
+    int reduceBook(String id);
 }

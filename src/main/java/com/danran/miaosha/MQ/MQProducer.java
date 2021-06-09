@@ -58,13 +58,13 @@ public class MQProducer {
                 try {
                     // 开始 ========创建订单 order =========
                     // 事务提交成功后返回提交状态通知
-                    String order_id = (String) ((Map) arg).get("order_id");
-                    Integer user_id = (Integer) ((Map) arg).get("user_id");
-                    Integer book_id = (Integer) ((Map) arg).get("book_id");
-                    Integer amount = (Integer) ((Map) arg).get("amount");
-
-
-                    orderService.addOrder(order_id, user_id, book_id, amount);
+//                    String order_id = (String) ((Map) arg).get("order_id");
+//                    Integer user_id = (Integer) ((Map) arg).get("user_id");
+//                    Integer book_id = (Integer) ((Map) arg).get("book_id");
+//                    Integer amount = (Integer) ((Map) arg).get("amount");
+//
+//
+//                    orderService.addOrder(order_id, user_id, book_id, amount);
 
 
                     System.out.println("executeLocalTransaction: msg == " + msg);
@@ -108,18 +108,11 @@ public class MQProducer {
      * @param bookId 书籍的ID
      * @return 是否成功
      */
-    public boolean transactionAsyncReduceStock(String orderId, Integer userId, Integer bookId) {
-        Map<String, Object> bodyMap = new ConcurrentHashMap<>();
-        bodyMap.put("order_id", orderId);
-        bodyMap.put("user_id", userId);
-        bodyMap.put("book_id", bookId);
-        bodyMap.put("amount", 1);
+    public boolean transactionAsyncReduceStock(String orderId, Integer userId, String bookId, Integer version) {
 
-        Map<String, Object> argsMap = new ConcurrentHashMap<>();
-        argsMap.put("order_id", orderId);
-        argsMap.put("user_id", userId);
-        argsMap.put("book_id", bookId);
-        argsMap.put("amount", 1);
+
+        Map<String, Object> bodyMap = createParamMap(orderId, userId, bookId, version);
+        Map<String, Object> argsMap = createParamMap(orderId, userId, bookId, version);
 
 
         // 创建消息
@@ -145,11 +138,18 @@ public class MQProducer {
 
     }
 
-    public boolean asyncReduceStock(Integer userId, Integer bookId) {
-        Map<String, Object> bodyMap = new HashMap<>();
-        bodyMap.put("user_id", userId);
-        bodyMap.put("book_id", bookId);
-        bodyMap.put("amount", 1);
+    private Map<String, Object> createParamMap(String orderId, Integer userId, String bookId, Integer version) {
+        Map<String, Object> ParamMap = new ConcurrentHashMap<>();
+        ParamMap.put("order_id", orderId);
+        ParamMap.put("user_id", userId);
+        ParamMap.put("book_id", bookId);
+        ParamMap.put("amount", 1);
+        ParamMap.put("version", version);
+        return ParamMap;
+    }
+
+    public boolean asyncReduceStock(String orderId, Integer userId, String bookId, Integer version) {
+        Map<String, Object> bodyMap = createParamMap(orderId, userId, bookId, version);
 
         Message message = new Message(topicName, "increase",
                 JSON.toJSON(bodyMap).toString().getBytes(StandardCharsets.UTF_8));

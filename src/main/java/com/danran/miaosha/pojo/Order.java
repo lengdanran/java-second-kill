@@ -18,9 +18,11 @@ public class Order implements Serializable {
 
     private Integer userId;
 
-    private Integer bookId;
+    private String bookId;
 
     private Integer amount;
+
+    private Integer status;
 
     private static final long serialVersionUID = 1L;
 }

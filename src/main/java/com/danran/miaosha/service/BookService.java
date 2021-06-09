@@ -1,8 +1,10 @@
 package com.danran.miaosha.service;
 
 import com.danran.miaosha.Mapper.BookMapper;
+import com.danran.miaosha.pojo.Book;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @Classname BookService
@@ -16,11 +18,19 @@ public class BookService {
     @Autowired
     private BookMapper bookMapper;
 
-    public boolean isExists(int bookId) {
+    public boolean isExists(String bookId) {
         return bookMapper.selectByPrimaryKey(bookId) != null;
     }
 
-    public boolean reduceBook(int bookId) {
+    @Transactional
+    public boolean reduceBook(String bookId, int version) {
+        Book book = bookMapper.selectByPrimaryKey(bookId);
+        if (book.getStock() == 0) return false;
+        if (version != book.getVersion()) return false;
         return bookMapper.reduceBook(bookId) == 1;
+    }
+
+    public Book getBookById(String bookId) {
+        return bookMapper.selectByPrimaryKey(bookId);
     }
 }

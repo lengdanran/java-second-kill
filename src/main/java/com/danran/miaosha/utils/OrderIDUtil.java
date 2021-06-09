@@ -32,7 +32,14 @@ public class OrderIDUtil {
         return prefix + String.format("%010d", hashCodeV);
     }
 
+    //得到32位的uuid
+    public String getUUID32(){
+        return UUID.randomUUID().toString().replace("-", "").toLowerCase();
+
+    }
+
     public static void main(String[] args) {
         System.out.println(new OrderIDUtil().getOrderID());
+        System.out.println(new OrderIDUtil().getUUID32().toUpperCase());
     }
 }
