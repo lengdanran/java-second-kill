@@ -24,10 +24,12 @@ public class BookService {
 
     @Transactional
     public boolean reduceBook(String bookId, int version) {
-        Book book = bookMapper.selectByPrimaryKey(bookId);
-        if (book.getStock() == 0) return false;
-        if (version != book.getVersion()) return false;
-        return bookMapper.reduceBook(bookId) == 1;
+        synchronized (this) {
+            Book book = bookMapper.selectByPrimaryKey(bookId);
+            if (book.getStock() == 0) return false;
+            if (version > book.getVersion()) return false;
+            return bookMapper.reduceBook(bookId) == 1;
+        }
     }
 
     public Book getBookById(String bookId) {
