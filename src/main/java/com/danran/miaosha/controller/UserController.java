@@ -4,6 +4,7 @@ package com.danran.miaosha.controller;
 import com.danran.miaosha.MQ.MQProducer;
 import com.danran.miaosha.pojo.Book;
 import com.danran.miaosha.pojo.Order;
+import com.danran.miaosha.pojo.OrderMessage;
 import com.danran.miaosha.pojo.User;
 import com.danran.miaosha.response.CommonReturnType;
 import com.danran.miaosha.service.BookService;
@@ -29,9 +30,15 @@ import java.util.concurrent.*;
 @CrossOrigin
 public class UserController {
 
-    private final static int EX_TIME = 2;
+    private final static int EX_TIME = 20;
     private final static int DEAL = 1;
     private final static int ROLL_BACK = 0;
+    private static final String ORDER_SEND_SUCCESS = "<<<<===订单发送成功===>>>>";
+    private static final String ORDER_SEND_FAILED = "<<<<===订单发送失败===transactionAsyncReduceStock返回为[false]=====>>>>>>>>";
+    private static final String ORDER_CREATE_FAILED = "<<<<===订单消息创建失败===>>>>=====库存不足，商品已经抢光了=====>>>>>>>>";
+    private static final String ORDER_NOT_GET = "<<<<===订单发送成功,但没有抢到===>>>>";
+
+    private static final int[] RETRY_LIST = {3 * 1000, 6 * 1000, 12 * 1000, 24 * 1000};
 
     @Autowired
     private UserService userService;
@@ -70,6 +77,17 @@ public class UserController {
         if (!userExists || !bookExists) {
             return CommonReturnType.failed("userId or bookId doesn't exits.");
         }
+
+        Book book = (Book) redisUtil.get(bookId);
+        if (book == null) {
+            // redis 缓存中没有该书籍的信息，从数据中拉取，并更新缓存,设置失效时间为20s
+            System.out.println("redis 缓存中没有该书籍的信息，从数据中拉取，并更新缓存,设置失效时间");
+            book = bookService.getBookById(bookId);
+            if (book == null) throw new RuntimeException("该书籍不存在");
+            if (book.getStock() == 0) return CommonReturnType.create(ORDER_CREATE_FAILED); // 库存不足
+        }
+        if (book.getStock() == 0) return CommonReturnType.create(ORDER_CREATE_FAILED); // 库存不足
+
         // 生成订单信息(Order)
         // Order order = orderService.addOrder(userId, bookId,1);
         Order order = new Order(orderIDUtil.getOrderID(), userId, bookId, 1, DEAL);
@@ -86,25 +104,47 @@ public class UserController {
                     System.out.println("redis 缓存中没有该书籍的信息，从数据中拉取，并更新缓存,设置失效时间");
                     book = bookService.getBookById(bookId);
                     if (book == null) throw new RuntimeException("该书籍不存在");
+                    if (book.getStock() == 0) return ORDER_CREATE_FAILED; // 库存不足
                     redisUtil.set(bookId, book, EX_TIME);
                 }
+
+                if (book.getStock() == 0) return ORDER_CREATE_FAILED; // 库存不足
                 // 完成对应的下单事务型消息机制
                 if (!mqProducer.transactionAsyncReduceStock(order.getId(), userId, bookId, book.getVersion())) {
-                    throw new Exception("下单失败");
+                    return ORDER_SEND_FAILED;
                 }
-                return "<<<<===下单成功===>>>>";
+                return ORDER_SEND_SUCCESS;
             }
         });
 
+        String info;
         try {
-            Object o = future.get();
+            info = (String) future.get();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
             return CommonReturnType.failed("失败：future.get()方法出错");
         }
 
-        return CommonReturnType.create(order);
-
+        if (info.equals(ORDER_CREATE_FAILED)) {
+            return CommonReturnType.create("商品卖完了");
+        } else if (info.equals(ORDER_SEND_FAILED)) {
+            return CommonReturnType.create("商品卖完了");
+        } else {
+            for (int time_wait : RETRY_LIST) {
+                Object message = OrderMessage.getMessage(order.getId());
+                if (message != null) {
+                    OrderMessage.deleteMessage(order.getId());
+                    return CommonReturnType.create(message);
+                } else {
+                    try {
+                        Thread.sleep(time_wait);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return CommonReturnType.create(ORDER_NOT_GET);
+        }
     }
 
     @RequestMapping(value = "/serialize", method = {RequestMethod.POST})
