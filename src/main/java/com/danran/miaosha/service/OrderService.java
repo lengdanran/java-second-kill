@@ -33,6 +33,11 @@ public class OrderService {
     }
 
     @Transactional
+    public void insertOrder(Order order) {
+        orderMapper.insert(order);
+    }
+
+    @Transactional
     public Order rollbackOrder(String orderID) {
         Order order = orderMapper.selectByPrimaryKey(orderID);
         order.setStatus(ROLL_BACK);

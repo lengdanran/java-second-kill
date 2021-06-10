@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.*;
 
 /**
@@ -72,6 +76,9 @@ public class UserController {
     @ResponseBody
     public CommonReturnType getBook(@RequestParam("user_id") int userId,
                                     @RequestParam("book_id") String bookId) {
+        Random random = new Random();
+        int i = random.nextInt(10);
+        if (i < 6) return CommonReturnType.create("来晚了，下次再来");
         // 检查用户和书籍的存在信息
         boolean userExists = userService.isExists(userId);
         boolean bookExists = bookService.isExists(bookId);
@@ -147,6 +154,63 @@ public class UserController {
             return CommonReturnType.create(ORDER_NOT_GET);
         }
     }
+
+
+    @RequestMapping(value = "/redis/getBook/", method = {RequestMethod.POST})
+    @ResponseBody
+    public synchronized CommonReturnType getBook_2(@RequestParam("user_id") int userId,
+                                    @RequestParam("book_id") String bookId) {
+
+        Random random = new Random();
+        int i = random.nextInt(10);
+        if (i < 6) return CommonReturnType.create("来晚了，下次再来");
+
+        boolean userExists = userService.isExists(userId);
+        if (!userExists) return CommonReturnType.create("用户不存在");
+
+        synchronized (this) {
+            Map<String, Book> bookMapInRedis = bookService.getBookInRedis();
+            Book bookInRedis = bookMapInRedis.get(bookId);
+            if (bookInRedis == null) return CommonReturnType.create("商品卖完了");
+
+            if (bookInRedis.getStock() == 0) {
+                System.out.println("<<<<<<<<<<==========当前书籍库存为0，删除缓存，写回数据库============>>>>>>>>>>>");
+
+                bookMapInRedis.remove(bookId);
+                redisUtil.set("book_map", bookMapInRedis);
+
+                bookService.updateBook(bookInRedis);
+                return CommonReturnType.create("商品卖完了");
+            }
+
+            bookInRedis.reduceStack();// 减Redis库存
+
+            if (bookInRedis.getStock() == 0) {
+                System.out.println("<<<<<<===减库存后，库存为0，写回数据库，删除缓存=====>>>>>>");
+                bookMapInRedis.remove(bookId);
+                redisUtil.set("book_map", bookMapInRedis);
+                bookService.updateBook(bookInRedis);
+            } else {
+                System.out.println("<<<<<<===减库存后，更新缓存=====>>>>>>");
+                bookMapInRedis.put(bookId, bookInRedis);
+                redisUtil.set("book_map", bookMapInRedis);
+            }
+
+            System.out.println("<<<<<===创建订单======>>>>>");
+            Order order = new Order(orderIDUtil.getOrderID(),userId, bookId,1,1);
+
+            @SuppressWarnings("unchecked")
+            List<Order> orderList = (List<Order>) redisUtil.get("order_list");
+            if (orderList == null) orderList = new ArrayList<>();
+            orderList.add(order);
+            redisUtil.set("order_list",orderList);
+            return CommonReturnType.create(order);
+        }
+
+
+    }
+
+
 
     @RequestMapping(value = "/serialize", method = {RequestMethod.POST})
     @ResponseBody

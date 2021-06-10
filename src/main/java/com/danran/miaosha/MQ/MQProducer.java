@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -153,6 +154,18 @@ public class MQProducer {
 
         Message message = new Message(topicName, "increase",
                 JSON.toJSON(bodyMap).toString().getBytes(StandardCharsets.UTF_8));
+        try {
+            producer.send(message);
+        } catch (MQClientException | RemotingException | MQBrokerException | InterruptedException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    public boolean sendCreateOrderMessage(List<Order> orderList) {
+        Message message =
+                new Message("createOrder", JSON.toJSON(orderList).toString().getBytes(StandardCharsets.UTF_8));
         try {
             producer.send(message);
         } catch (MQClientException | RemotingException | MQBrokerException | InterruptedException e) {

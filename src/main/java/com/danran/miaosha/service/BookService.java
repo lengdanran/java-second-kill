@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * @Classname BookService
  * @Description TODO
@@ -39,7 +43,24 @@ public class BookService {
         return bookMapper.selectByPrimaryKey(bookId) != null;
     }
 
-    @Transactional
+    @SuppressWarnings("unchecked")
+    public Map<String, Book> getBookInRedis() {
+          return  (Map<String, Book>) redisUtil.get("book_map");
+    }
+
+    public List<Book> getAllBook() {
+        return bookMapper.getAllBook();
+    }
+
+    public Map<String, Book> getAllBookMap() {
+        List<Book> allBook = getAllBook();
+        Map<String, Book> map = new ConcurrentHashMap<>();
+        for (Book book : allBook) {
+            map.put(book.getId(), book);
+        }
+        return map;
+    }
+
     public boolean reduceBook(String bookId, int version) {
         synchronized (this) {
             Book book = bookMapper.selectByPrimaryKey(bookId);
@@ -47,6 +68,10 @@ public class BookService {
             if (version != book.getVersion()) return false;
             return bookMapper.reduceBook(bookId) == 1;
         }
+    }
+
+    public void updateBook(Book book) {
+        bookMapper.updateByPrimaryKeySelective(book);
     }
 
     public Book getBookById(String bookId) {

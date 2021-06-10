@@ -4,6 +4,8 @@ import com.danran.miaosha.pojo.Book;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Mapper
 @Repository
 public interface BookMapper {
@@ -20,4 +22,6 @@ public interface BookMapper {
     int updateByPrimaryKey(Book record);
 
     int reduceBook(String id);
+
+    List<Book> getAllBook();
 }
