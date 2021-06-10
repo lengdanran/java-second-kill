@@ -3,11 +3,10 @@ package com.danran.miaosha.utils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @Classname OrderIDUtil
@@ -38,8 +37,96 @@ public class OrderIDUtil {
 
     }
 
-    public static void main(String[] args) {
-        System.out.println(new OrderIDUtil().getOrderID());
-        System.out.println(new OrderIDUtil().getUUID32().toUpperCase());
+    private static String getRandomChinese() {
+        String str = "";
+        int hightPos; //
+        int lowPos;
+        Random random = new Random();
+        hightPos = (176 + Math.abs(random.nextInt(39)));
+        lowPos = (161 + Math.abs(random.nextInt(93)));
+        byte[] b = new byte[2];
+        b[0] = (Integer.valueOf(hightPos)).byteValue();
+        b[1] = (Integer.valueOf(lowPos)).byteValue();
+        try {
+            str = new String(b, "GBK");
+            return str;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    private static String getRandomBookName() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < 3; i++) {
+            stringBuilder.append(getRandomChinese());
+        }
+        return stringBuilder.toString();
+    }
+
+    private static void createTestData() throws IOException {
+        BufferedReader bookReader = new BufferedReader(new FileReader("F:\\EEworkspace\\miaosha\\src\\RandomBookData.csv"));
+        BufferedReader userReader = new BufferedReader(new FileReader("src/RandomUserData.csv"));
+
+        List<String> bookList = new ArrayList<>();
+        List<String> userList = new ArrayList<>();
+        String tmp;
+
+        while ((tmp = bookReader.readLine()) != null) {
+            bookList.add(tmp.split(",")[0]);
+        }
+        System.out.println(bookList.size());
+        while ((tmp = userReader.readLine()) != null) {
+            userList.add(tmp.split(",")[0]);
+        }
+        System.out.println(userList.size());
+
+        File file;
+        OutputStream os;
+        OutputStreamWriter osw;
+        file = new File("src/RandomTestData.csv" );
+        os = new FileOutputStream(file);
+        osw = new OutputStreamWriter(os);
+        List<String> data = new ArrayList<>();
+        for (String user_str : userList) {
+            for (String book_str : bookList) {
+                data.add(user_str + "," + book_str + "\n");
+            }
+        }
+        System.out.println(data.get(0));
+        Collections.shuffle(data);
+        System.out.println(data.get(0));
+        for (String datum : data) {
+            osw.write(datum);
+        }
+        osw.close();
+
+
+
+
+
+
+    }
+
+    public static void main(String[] args) throws IOException {
+        createTestData();
+////        System.out.println(new OrderIDUtil().getOrderID());
+//        OrderIDUtil orderIDUtil = new OrderIDUtil();
+//        Random random = new Random();
+////        System.out.println(new OrderIDUtil().getUUID32().toUpperCase());
+//        File file;
+//        OutputStream os;
+//        OutputStreamWriter osw;
+//        file = new File("src/RandomUserData.csv" );
+//        os = new FileOutputStream(file);
+//        osw = new OutputStreamWriter(os);
+////        for (int i = 0; i < 100; i++) {
+////            osw.write(orderIDUtil.getUUID32().toUpperCase() + "," + getRandomBookName() +"," +(random.nextInt(100) + 100) + "," + "0,1\n");
+////        }
+//        for (int i = 0; i < 10000; i++) {
+//            osw.write((i + 2) +"," + getRandomBookName() + "\n");
+//        }
+//        osw.flush();
+//        osw.close();
     }
 }

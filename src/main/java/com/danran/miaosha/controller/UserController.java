@@ -11,9 +11,10 @@ import com.danran.miaosha.service.BookService;
 import com.danran.miaosha.service.OrderService;
 import com.danran.miaosha.service.UserService;
 import com.danran.miaosha.utils.OrderIDUtil;
-import com.danran.miaosha.utils.RedisUtil;
+import com.danran.miaosha.utils.MyRedisUtil;
 import com.google.common.util.concurrent.RateLimiter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
@@ -38,7 +39,7 @@ public class UserController {
     private static final String ORDER_CREATE_FAILED = "<<<<===订单消息创建失败===>>>>=====库存不足，商品已经抢光了=====>>>>>>>>";
     private static final String ORDER_NOT_GET = "<<<<===订单发送成功,但没有抢到===>>>>";
 
-    private static final int[] RETRY_LIST = {3 * 1000, 6 * 1000, 12 * 1000, 24 * 1000};
+    private static final int[] RETRY_LIST = {3 * 1000, 3 * 1000, 6 * 1000};
 
     @Autowired
     private UserService userService;
@@ -53,7 +54,7 @@ public class UserController {
     private MQProducer mqProducer;
 
     @Autowired
-    private RedisUtil redisUtil;
+    private MyRedisUtil redisUtil;
 
     @Autowired
     private OrderIDUtil orderIDUtil;
@@ -63,7 +64,7 @@ public class UserController {
 
     @PostConstruct
     public void init() {
-        executorService = Executors.newFixedThreadPool(20);
+        executorService = Executors.newFixedThreadPool(100);
         orderCreateRateLimiter = RateLimiter.create(300);
     }
 

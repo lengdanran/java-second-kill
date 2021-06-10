@@ -5,13 +5,12 @@ import com.danran.miaosha.pojo.Order;
 import com.danran.miaosha.pojo.OrderMessage;
 import com.danran.miaosha.service.BookService;
 import com.danran.miaosha.service.OrderService;
-import com.danran.miaosha.utils.RedisUtil;
+import com.danran.miaosha.utils.MyRedisUtil;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,7 +44,11 @@ public class MQConsumer {
     private BookService bookService;
 
     @Autowired
-    private RedisUtil redisUtil;
+    private MyRedisUtil redisUtil;
+
+    @Value("${book.alive}")
+    private int BOOK_ALIVE;
+
 
     @PostConstruct
     public void init() throws MQClientException {
@@ -57,6 +60,8 @@ public class MQConsumer {
             @Override
             public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ConsumeConcurrentlyContext context) {
                 // 实现真正的数据库扣减库存的逻辑
+
+
                 System.out.println("<<<<<============消息msgs数量==========>>>>>>>>>===" + msgs.size());
                 MessageExt msg = msgs.get(0);
                 if (msg.getReconsumeTimes() == 3) {
@@ -83,13 +88,11 @@ public class MQConsumer {
                         System.out.println("<<<<======创建订单=========>>>>>");
                         Order order = orderService.addOrder(order_id, user_id, book_id, amount);
                         System.out.println("<<<<======扣减库存后，刷新Redis缓存=========>>>>>");
-                        redisUtil.set(book_id, bookService.getBookById(book_id), 2);
-                        System.out.println("<<<<<<===回填订单信息["+order+"]=====>>>>>>");
+                        redisUtil.set(book_id, bookService.getBookById(book_id), BOOK_ALIVE);
+                        System.out.println("<<<<<<===回填订单信息[" + order + "]=====>>>>>>");
                         OrderMessage.addMessage(order_id, order);
                     } else {
                         System.out.println("<<<<======扣减库存失败，回滚=========>>>>>");
-//                    orderService.rollbackOrder(order_id);
-
                     }
                 }
 
