@@ -15,8 +15,8 @@ import java.util.Map;
  * @Date 2021/6/10 11:23
  * @Created by LengDanran
  */
-@Component
-public class RedisWarmUp  {
+//@Component
+public class RedisWarmUp implements ApplicationRunner {
 
     @Autowired
     private MyRedisUtil redisUtil;
@@ -32,7 +32,7 @@ public class RedisWarmUp  {
         System.out.println("<<==缓存数据预热成功==>>");
     }
 
-//    @Override
+    @Override
     public void run(ApplicationArguments args) {
         warmUp();
     }

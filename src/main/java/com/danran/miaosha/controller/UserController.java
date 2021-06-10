@@ -101,7 +101,7 @@ public class UserController {
         Order order = new Order(orderIDUtil.getOrderID(), userId, bookId, 1, DEAL);
 
         // 同步调用线程池的submit方法
-        // 拥塞窗口为20的等待队列，用来队列化泄洪
+        // 拥塞窗口为100的等待队列，用来队列化泄洪
         Future<Object> future = executorService.submit(new Callable<Object>() {
 
             @Override
